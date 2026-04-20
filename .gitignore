@@ -33,8 +33,9 @@ __pycache__/
 output_data/
 node_modules/
 
+# --- Build Artifacts ---
 *.whl
-.venv/
-__pycache__/
-node_modules/
 *.csv
+
+# --- Model Files (Large) ---
+en_core_med7_lg-*.whl
