@@ -1,0 +1,40 @@
+# --- Environment Variables (Security) ---
+.env
+
+# --- Python / Virtual Environments ---
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.python-version
+
+# --- macOS Specific ---
+.DS_Store
+._*
+
+# --- Files to Ignore ---
+*.pdf
+*.docx
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+
+# --- Project Specific ---
+logs/
+*.log
+__pycache__/
+*.pyc
+output_data/
+node_modules/
+
+*.whl
+.venv/
+__pycache__/
+node_modules/
+*.csv
