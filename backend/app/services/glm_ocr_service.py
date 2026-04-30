@@ -6,6 +6,7 @@ Integrates with Ollama for local, privacy-preserving handwritten text extraction
 import logging
 import os
 import base64
+import time
 from typing import Optional, Dict, Any
 import httpx
 
@@ -36,7 +37,6 @@ class GLMOCRService:
         
         # Return cached result if still valid
         if self._available_cache is not None:
-            import time
             if time.time() - self._last_check < self._cache_ttl:
                 return self._available_cache
         
@@ -159,11 +159,13 @@ class GLMOCRService:
             try:
                 # Fix common JSON issues
                 repaired = extracted_text
-                # Fix unquoted keys
-                repaired = re.sub(r'(\w+):', r'"\1":', repaired)
-                # Fix single quotes to double quotes
-                repaired = repaired.replace("'", '"')
-                # Remove trailing commas
+                # Fix unquoted keys — only match keys that are NOT already quoted
+                # Correct: { name: "x" }  →  { "name": "x" }
+                # Must NOT match: { "name": "x" }  (already quoted)
+                repaired = re.sub(r'(?<!["\w])(\b[a-zA-Z_]\w*\b)\s*:', r'"\1":', repaired)
+                # Fix single quotes to double quotes (for values only, not inside words)
+                repaired = re.sub(r"(?<![\\])'", '"', repaired)
+                # Remove trailing commas before } or ]
                 repaired = re.sub(r',\s*}', '}', repaired)
                 repaired = re.sub(r',\s*]', ']', repaired)
                 

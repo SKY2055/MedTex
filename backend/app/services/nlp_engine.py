@@ -179,7 +179,11 @@ class MedTexEngine:
             "amphojel qs": "amphojel",
             "amphojel qs ad": "amphojel",
             "amphoel qs": "amphojel",
-            "amphoel qs ad": "amphojel"
+            "amphoel qs ad": "amphojel",
+            # Unit corrections (me → mg, common OCR error)
+            " me": " mg",
+            "me ": "mg ",
+            " me ": " mg ",
         }
         
         # Model 3: Transformer NER (biomedical-ner-all) - secondary model
@@ -524,7 +528,21 @@ class MedTexEngine:
                 e["label"] = "FREQUENCY"
                 e["color"] = self.color_map.get("FREQUENCY", "#d0ebff")
 
-            # Fix route
+            # Fix ROUTE misclassification: if labeled ROUTE but contains known drug, it's DRUG
+            if label == "route":
+                # Check if any word in the text is a known drug
+                words = text.split()
+                for word in words:
+                    if word in self.KNOWN_DRUGS or word in self.DRUG_NORMALIZATION:
+                        e["label"] = "DRUG"
+                        e["color"] = self.color_map.get("DRUG", "#ffcfcc")
+                        break
+                # If still ROUTE, only keep if it's a valid route word
+                if e["label"] == "ROUTE" and text not in ["oral", "iv", "topical", "mouth", "eye", "ear"]:
+                    e["label"] = "DRUG"  # Default to DRUG for unknown routes that might be drug names
+                    e["color"] = self.color_map.get("DRUG", "#ffcfcc")
+            
+            # Fix route (explicit route words)
             elif text in ["oral", "iv", "topical", "mouth", "eye", "ear"]:
                 e["label"] = "ROUTE"
                 e["color"] = self.color_map.get("ROUTE", "#fff4e6")

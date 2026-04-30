@@ -31,11 +31,38 @@ from backend.app.services.fhir_service import fhir_service
 from backend.app.services.file_processor import extract_text_from_file
 from backend.app.services.nlp_engine import medtex_engine
 from backend.app.services.phi_service import phi_service
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 ENABLE_PHI = os.getenv("ENABLE_PHI_DETECTION", "true").lower() == "true"
+
+
+# ---------------------------------------------------------------------------
+# Safety net: Strip entity labels from text before NLP
+# ---------------------------------------------------------------------------
+
+def _strip_entity_labels(text: str) -> str:
+    """
+    Safety net to strip VLM-embedded entity labels before NLP processing.
+    This is a backup in case clean_ocr_text in file_processor.py misses any.
+    """
+    if not text:
+        return ""
+    
+    ENTITY_LABELS = [
+        "DRUG", "FORM", "STRENGTH", "DOSAGE", "FREQUENCY",
+        "DURATION", "ROUTE", "DISEASE", "SYMPTOM", "ANATOMY",
+        "PROCEDURE", "LAB", "CHEMICAL", "CANCER",
+        "Drug", "Form", "Strength", "Dosage", "Frequency",
+        "Duration", "Route", "Disease", "Symptom", "Anatomy",
+        "Dosage Form",
+    ]
+    for label in ENTITY_LABELS:
+        text = re.sub(r'\s*\b' + re.escape(label) + r'\b\s*', ' ', text)
+    
+    return re.sub(r' {2,}', ' ', text).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +91,10 @@ def _detect_phi(text: str) -> Optional[dict]:
     return None
 
 
-def _run_ner(text: str, clinical_summary: bool) -> dict[str, Any]:
+def _run_ner(text: str, clinical_summary: bool = True) -> dict:
+    # Safety net: strip entity labels before NLP
+    text = _strip_entity_labels(text)
+    
     if clinical_summary:
         return medtex_engine.extract_clinical_summary(text)
     entities = medtex_engine.extract_entities(text)
