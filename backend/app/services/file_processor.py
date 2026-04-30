@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 # Calculate project root once at module level
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# Optional CRAFT text detector for line segmentation
+try:
+    import craft_text_detector  # type: ignore
+    CRAFT_AVAILABLE = True
+except ImportError:
+    CRAFT_AVAILABLE = False
+
 # Optional OpenCV for advanced image pre-processing
 try:
     import cv2
@@ -45,31 +52,24 @@ try:
     # Try multiple .env locations
     env_paths = [
         os.path.join(project_root, '.env'),
-        '/Users/suraj/MedTex/medtex/.env',  # Absolute path fallback
         os.path.join(os.getcwd(), '.env'),   # Current working directory
     ]
     
     GROQ_API_KEY = None
-    logger.info(f"Checking .env paths: {env_paths}")
     for env_path in env_paths:
         exists = os.path.exists(env_path)
-        logger.info(f"  - {env_path}: exists={exists}")
         if exists:
             load_dotenv(dotenv_path=env_path, override=True)
             GROQ_API_KEY = os.getenv("GROQ_API_KEY")
             if GROQ_API_KEY:
-                logger.info(f"✅ Loaded .env from: {env_path}, key length: {len(GROQ_API_KEY)}")
                 break
     
     if not GROQ_API_KEY:
         # Try loading without specifying path (python-dotenv default behavior)
         load_dotenv(override=True)
         GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-        if GROQ_API_KEY:
-            logger.info("✅ Loaded .env from default location")
     
     GROQ_AVAILABLE = bool(GROQ_API_KEY and GROQ_API_KEY.strip())
-    logger.info(f"GROQ_API_KEY loaded: {GROQ_AVAILABLE}, length: {len(GROQ_API_KEY) if GROQ_API_KEY else 0}")
 except ImportError as e:
     GROQ_AVAILABLE = False
     logger.warning(f"Groq import failed: {e}. Install with: pip install groq")
@@ -478,27 +478,36 @@ def _extract_text_with_easyocr(image: Image.Image, paragraph: bool = True) -> st
 
 def clean_ocr_text(text: str) -> str:
     """
-    Clean OCR text for common handwriting errors and remove entity labels.
-    
-    This function fixes common OCR errors that occur when reading medical shorthand
-    and handwriting, such as confusing '.' with ',', 'y' with 'mg', etc.
-    Also removes entity labels (FORM, DRUG, STRENGTH, FREQUENCY, DURATION, CANCER)
-    that may be included in the OCR output.
-    
+    Clean OCR text for common handwriting errors and strip embedded NER labels.
+
+    VLMs occasionally append entity labels (DRUG, FORM, STRENGTH …) directly onto
+    words in raw_text despite prompt instructions.  We strip them here so they never
+    reach the NLP engine or the frontend.
+
     Args:
-        text: Raw OCR text
-        
+        text: Raw OCR / VLM text
+
     Returns:
         Cleaned text
     """
     if not text:
         return ""
-    
-    # Remove entity labels that may be appended to words (e.g., "capsuleFORM", "CephalexinDRUG")
-    entity_labels = ["FORM", "DRUG", "STRENGTH", "FREQUENCY", "DURATION", "CANCER", "DOSAGE", "ROUTE"]
-    for label in entity_labels:
-        # Remove label regardless of position (attached to word or standalone)
-        text = re.sub(label, "", text, flags=re.IGNORECASE)
+
+    # ── Strip embedded NER labels ──────────────────────────────────────────────
+    # Matches labels attached to words:  "CephalexinDRUG"  "500 mgSTRENGTH"
+    # Also matches standalone labels on their own:  "DRUG"  "FORM"
+    ENTITY_LABELS = [
+        "DRUG", "FORM", "STRENGTH", "DOSAGE", "FREQUENCY",
+        "DURATION", "ROUTE", "DISEASE", "SYMPTOM", "ANATOMY",
+        "PROCEDURE", "LAB", "CHEMICAL", "CANCER",
+        # lowercase / mixed-case variants the VLM sometimes emits
+        "Drug", "Form", "Strength", "Dosage", "Frequency",
+        "Duration", "Route", "Disease", "Symptom", "Anatomy",
+        "Dosage Form",
+    ]
+    for label in ENTITY_LABELS:
+        # Remove label when it is glued to a word: "Cephalexin DRUG" or "CephalexinDRUG"
+        text = re.sub(r'\s*\b' + re.escape(label) + r'\b\s*', ' ', text)
     
     # Fix common handwriting OCR errors
     replacements = {
@@ -515,10 +524,10 @@ def clean_ocr_text(text: str) -> str:
     
     for pattern, replacement in replacements.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    
-    # Clean up extra spaces
-    text = re.sub(r'\s+', ' ', text).strip()
-    
+
+    # Normalise whitespace
+    text = re.sub(r' {2,}', ' ', text).strip()
+
     return text
 
 
@@ -688,7 +697,7 @@ DOSAGE NOTATION MAPPING (apply these transformations):
 - "0-1-0" → "once daily in the afternoon"
 
 INTERPRETATION RULES FOR FIELDS:
-- "raw_text": exact text as you read it from the prescription - DO NOT add entity labels like FORM, DRUG, STRENGTH, FREQUENCY, DURATION, CANCER, DOSAGE, ROUTE to the text
+- "raw_text": exact text as you read it from the prescription - ABSOLUTELY FORBIDDEN: DO NOT add entity labels like FORM, DRUG, STRENGTH, FREQUENCY, DURATION, CANCER, DOSAGE, ROUTE, Dosage, Form, Strength, Frequency, Duration, Cancer, Route to the text. If you see these words in the handwriting, transcribe them as-is, but NEVER append them as labels.
 - "drug_name": name of the medication as written
 - "strength": concentration or strength (e.g., "500 mg", "125 mg/5 ml", "3%")
 - "dose": amount to be taken each time (e.g., "1 tablet", "1 tsp", "20 drops")
@@ -810,6 +819,9 @@ def _extract_text_with_vlm(image: Image.Image) -> Tuple[str, Dict]:
             med["drug_name"] = autocorrect_drug_name(med["drug_name"])
         if med.get("frequency"):
             med["frequency"] = normalize_dosage_notation(med["frequency"])
+        # CRITICAL: Clean raw_text to remove entity labels (DRUG, STRENGTH, etc.)
+        if med.get("raw_text"):
+            med["raw_text"] = clean_ocr_text(med["raw_text"])
     
     # Combine all raw_text from medications for NER processing
     combined_text = " ".join([m.get("raw_text", "") for m in medications])
@@ -864,6 +876,9 @@ def _extract_text_with_gemini(image: Image.Image) -> Tuple[str, Dict]:
                     med["drug_name"] = autocorrect_drug_name(med["drug_name"])
                 if med.get("frequency"):
                     med["frequency"] = normalize_dosage_notation(med["frequency"])
+                # CRITICAL: Clean raw_text to remove entity labels (DRUG, STRENGTH, etc.)
+                if med.get("raw_text"):
+                    med["raw_text"] = clean_ocr_text(med["raw_text"])
             
             # Combine all raw_text from medications for NER processing
             combined_text = " ".join([m.get("raw_text", "") for m in medications])
@@ -898,7 +913,7 @@ def _extract_text_with_gemini(image: Image.Image) -> Tuple[str, Dict]:
                 raise
 
 
-def _preprocess_image_for_ocr(image: Image.Image) -> bytes:
+def _preprocess_image_bytes_for_ocr(image: Image.Image) -> bytes:
     """
     Preprocess image for better OCR accuracy on handwritten prescriptions.
     Uses OpenCV for grayscale conversion, denoising, and adaptive thresholding.
@@ -964,7 +979,7 @@ async def _extract_text_with_glm_ocr(image: Image.Image) -> Tuple[str, Dict]:
     
     try:
         # Preprocess image for better OCR accuracy
-        image_bytes = _preprocess_image_for_ocr(image)
+        image_bytes = _preprocess_image_bytes_for_ocr(image)
         
         # Use the GLM-OCR service (async)
         extracted_text = await glm_ocr_service.extract_text_from_image(image_bytes)
@@ -1502,7 +1517,7 @@ def _compute_ocr_confidence(image: Image.Image, config: str) -> Dict:
         return {"mean_confidence": 0.0, "word_confidences": {}, "word_count": 0}
 
 
-def _merge_ocr_results(results: List[Dict]) -> str:
+def _pick_best_ocr_pass(results: List[Dict]) -> str:
     """
     Merge multiple OCR passes using word-level voting.
     For each position, pick the most common word across passes.
@@ -1518,7 +1533,7 @@ def _merge_ocr_results(results: List[Dict]) -> str:
     return best['text']
 
 
-def _merge_ocr_results(easyocr_text: str, tesseract_text: str) -> str:
+def _merge_easyocr_tesseract(easyocr_text: str, tesseract_text: str) -> str:
     """
     Merge OCR results from EasyOCR and Pytesseract using word-level confidence voting.
     
@@ -1645,7 +1660,7 @@ def extract_text_from_image(file_bytes) -> Tuple[str, Dict]:
     # Step 5: Ensemble voting - cross-reference VLM and Hybrid results
     if vlm_text and (easyocr_text or tesseract_text):
         # VLM succeeded, check if hybrid OCR agrees
-        hybrid_text = _merge_ocr_results(easyocr_text, tesseract_text)
+        hybrid_text = _merge_easyocr_tesseract(easyocr_text, tesseract_text)
         
         # Simple similarity check using word overlap
         vlm_words = set(vlm_text.lower().split())
@@ -1771,7 +1786,7 @@ def extract_text_from_image(file_bytes) -> Tuple[str, Dict]:
             continue
     
     # Merge results from multiple passes
-    merged_text = _merge_ocr_results(ocr_results)
+    merged_text = _pick_best_ocr_pass(ocr_results)
     normalized = normalize_text(merged_text)
     
     # Compute overall metadata
@@ -1797,7 +1812,7 @@ def extract_text_from_image(file_bytes) -> Tuple[str, Dict]:
         logger.info(f"Tesseract confidence ({best_confidence:.2f}) below threshold ({CONFIDENCE_THRESHOLD}), triggering GLM-OCR fallback...")
         try:
             # Preprocess image for better OCR accuracy
-            image_bytes = _preprocess_image_for_ocr(image)
+            image_bytes = _preprocess_image_bytes_for_ocr(image)
             
             # Run GLM-OCR (async function called from sync context)
             glm_text = asyncio.run(glm_ocr_service.extract_text_from_image(image_bytes))
