@@ -5,7 +5,7 @@ Handles user login, token generation, and user management
 
 import logging
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
@@ -18,10 +18,22 @@ from backend.app.core.auth import (
     Token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+from backend.app.core.rate_limit import rate_limiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+LOGIN_RATE_LIMIT_PER_MIN = 10
+
+
+def _enforce_login_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    key = f"auth_login:ip:{client_ip}"
+    if not rate_limiter.is_allowed(key, limit=LOGIN_RATE_LIMIT_PER_MIN, window=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+        )
 
 class LoginRequest(BaseModel):
     """Login request model"""
@@ -36,12 +48,13 @@ class UserCreate(BaseModel):
     role: str = "clinician"
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authenticate user and return access token.
     
     OAuth2 compatible endpoint for token generation.
     """
+    _enforce_login_rate_limit(request)
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         logger.warning(f"Failed login attempt for user: {form_data.username}")
@@ -67,12 +80,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     )
 
 @router.post("/login/json", response_model=Token)
-async def login_json(login_data: LoginRequest):
+async def login_json(login_data: LoginRequest, request: Request):
     """
     Authenticate user and return access token (JSON endpoint).
     
     Alternative to OAuth2 form-based login for easier client integration.
     """
+    _enforce_login_rate_limit(request)
     user = authenticate_user(login_data.username, login_data.password)
     if not user:
         logger.warning(f"Failed login attempt for user: {login_data.username}")

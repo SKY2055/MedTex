@@ -83,7 +83,7 @@ class MedTexEngine:
             "cetirizine", "levocetirizine", "loratadine", "desloratadine", "fexofenadine",
             "chlorpheniramine", "diphenhydramine", "promethazine", "dimenhydrinate",
             # Brand names (common South-Asian market)
-            "phexin", "zeedol", "zerodol", "stolin", "plax", "crocin", "combiflam", "dolo",
+            "phexin", "zeedol", "zerodol", "stolin", "crocin", "combiflam", "dolo",
             "pantodac", "pan", "razo", "nexpro", "nexium", "omeday", "voveran", "brufen",
             "augmentin", "taxim", "ceftas", "zithromax", "ciplox", "cifran", "flagyl", "metrogyl",
             "glucophage", "januvia", "glycomet", "amaryl", "obimet", "piozone",
@@ -101,12 +101,65 @@ class MedTexEngine:
             "wysolone", "dexa", "dexona", "medrol", "betnesol",
             "candid", "nizoral", "sporanox", "zovirax",
             # Additional common medications
-            "colgate", "amphojel", "amphogel", "belladonna",
+            "amphojel", "amphogel", "belladonna",
+            # COPD / Asthma medications (inhaled)
+            "tiotropium", "aclidinium", "umeclidinium", "glycopyrronium",
+            "indacaterol", "vilanterol", "olodaterol",
+            "budesonide-formoterol", "fluticasone-salmeterol", "fluticasone-vilanterol",
+            "budesonide-salmeterol", "beclomethasone-formoterol",
+            "mometasone", "ciclesonide",
+            "roflumilast", "azithromycin", "erythromycin", "clarithromycin",
+            "macrolide", "theophylline", "aminophylline",
+            # More cardiovascular
+            "nebivolol", "sotalol", "labetalol",
+            "perindopril", "moexipril", "trandolapril",
+            "azilsartan", "eprosartan", "telmisartan",
+            "amlodipine-valsartan", "amlodipine-olmesartan",
+            "olmesartan-hydrochlorothiazide", "valsartan-hydrochlorothiazide",
+            "sacubitril-valsartan", "valsartan-sacubitril",
+            "chlordiazepoxide", "nitrendipine", "lercanidipine",
+            "colesevelam", "ezetimibe", "fenofibrate", "gemfibrozil",
+            "niacin", "omega-3 acid ethyl esters",
+            # More diabetes
+            "tolbutamide", "chlorpropamide", "acetohexamide",
+            "repaglinide", "nateglinide",
+            "canagliflozin", "empagliflozin", "dapagliflozin", "ertugliflozin",
+            "albiglutide", "dulaglutide", "semaglutide", "lixisenatide",
+            "pramlintide",
+            # Fixed-dose combos
+            "metformin-glibenclamide", "metformin-glimepiride", "metformin-sitagliptin",
+            "glimepiride-pioglitazone", "alogliptin-metformin",
+            # Other common
+            "tramadol", "tapentadol", "buprenorphine",
+            "cyclobenzaprine", "tizanidine", "baclofen",
+            "methocarbamol", "orphenadrine",
+            "allopurinol", "febuxostat", "colchicine",
+            "febuxostat", "probenecid",
+            "leflunomide", "methotrexate", "hydroxychloroquine",
+            "sulfasalazine", "azathioprine",
+            "etanercept", "adalimumab", "infliximab",
+            "rituximab", "tocilizumab",
+            # Vitamins and minerals
+            "cholecalciferol", "ergocalciferol", "calcitriol",
+            "calcium carbonate", "calcium citrate",
+            "ferrous fumarate", "ferrous gluconate",
+            "cyanocobalamin", "methylcobalamin",
+            "pyridoxine", "thiamine", "riboflavin", "niacinamide",
+            "biotin", "pantothenic acid",
+            # Common supplements
+            "glucosamine", "chondroitin", "msm",
+            "melatonin", "5-htp", "l-tryptophan",
+            "ginkgo", "ginseng", "garlic", "ginger",
+            "turmeric", "curcumin", "green tea extract",
         }
         
         # Also include normalized forms for validation
         self.KNOWN_DRUGS.update({
-            "cephalexin", "aceclofenac", "clopidogrel", "belladonna", "stolin"
+            "cephalexin", "aceclofenac", "clopidogrel", "belladonna", "stolin",
+            "budesonide", "fluticasone", "salmeterol", "formoterol", "tiotropium",
+            "indacaterol", "glycopyrronium", "umeclidinium", "vilanterol",
+            "roflumilast", "theophylline", "aminophylline",
+            "mometasone", "ciclesonide", "beclomethasone",
         })
         
         # Drug name normalization map (brand/generic → standard name)
@@ -115,7 +168,6 @@ class MedTexEngine:
             "zeedol": "aceclofenac",
             "zerodol": "aceclofenac",
             "stolin": "stolin",
-            "plax": "clopidogrel",
             "belledonna": "belladonna",
             "amphojel": "amphojel",
             "disprin": "aspirin",
@@ -164,12 +216,12 @@ class MedTexEngine:
             "zee odol": "zeedol",
             "p hexin": "phexin",
             "sto lin": "stolin",
-            "col gate": "colgate",
-            "oral b": "oralb",
-            "electric brush": "electricbrush",
-            "tooth brush": "toothbrush",
-            "gate plax": "plax",
-            "col plax": "plax",
+            "col gate": "col gate",
+            "oral b": "oral b",
+            "electric brush": "electric brush",
+            "tooth brush": "tooth brush",
+            "gate plax": "gate plax",
+            "col plax": "col plax",
             "belladonna": "belladonna",
             "amphogel": "amphogel",
             "amphojel": "amphojel",
@@ -184,6 +236,16 @@ class MedTexEngine:
             " me": " mg",
             "me ": "mg ",
             " me ": " mg ",
+            # Common medical term OCR errors
+            "mgdical": "medical",
+            "mgllitus": "mellitus",
+            "mgt": "mg",
+            "dmg": "mg",
+            "dyspwalking": "dyspnea walking",
+            "dyspneaed": "dyspnea",
+            "dyspneic": "dyspneic",
+            "hemoptysismoptysis": "hemoptysis",
+            "orthopneanea": "orthopnea",
         }
         
         # Model 3: Transformer NER (biomedical-ner-all) - secondary model
@@ -213,6 +275,7 @@ class MedTexEngine:
             "ANATOMY": "ANATOMY",
             "DISEASE": "DISEASE",
             "CANCER": "CANCER",
+            "ORGANISM": "ORGANISM",
             # BC5CDR labels
             "Chemical": "DRUG",
             "Disease": "DISEASE",
@@ -224,6 +287,17 @@ class MedTexEngine:
             "Duration": "DURATION",
             "Condition": "DISEASE",
             "Symptom": "SYMPTOM",
+            # VLM/OCR common labels (standardize to remove underscores)
+            "Detailed_description": "Detailed_description",
+            "Sign_symptom": "SYMPTOM",
+            "Disease_disorder": "DISEASE",
+            "Biological_structure": "ANATOMY",
+            "Diagnostic_procedure": "PROCEDURE",
+            "Lab_value": "LAB",
+            "Dosage Form": "FORM",
+            "Severity": "SEVERITY",
+            "Date": "DATE",
+            "Occupation": "OCCUPATION",
         }
         
         # Learning flywheel: learned corrections from DB
@@ -432,7 +506,7 @@ class MedTexEngine:
             })
 
         # Frequency (daily, BD, TDS, etc.)
-        freq_regex = r'(once daily|twice daily|thrice daily|every \d+ hours|od|bd|tds|qid|qhs|prn)'
+        freq_regex = r'(once daily|twice daily|thrice daily|every \d+ hours|od|bd|tds|qid|qhs|prn|daily|nightly|weekly|monthly)'
         for match in re.finditer(freq_regex, text_lower):
             patterns.append({
                 "text": text[match.start():match.end()],
@@ -443,17 +517,163 @@ class MedTexEngine:
                 "color": self.color_map.get("FREQUENCY", "#d0ebff")
             })
 
-        # Dosage Frequency Patterns (e.g., 1-0-1, 1 - 1 - 0)
-        freq_pattern_regex = r'\b\d\s*-\s*\d\s*-\s*\d\b'
-        for match in re.finditer(freq_pattern_regex, text_lower):
-            patterns.append({
-                "text": text[match.start():match.end()],
-                "label": "FREQUENCY",
-                "start": match.start(),
-                "end": match.end(),
-                "score": 1.0,
-                "color": self.color_map.get("FREQUENCY", "#d0ebff")
-            })
+        return patterns
+
+    def _extract_disease_patterns(self, text: str) -> list:
+        """
+        Rule-based extraction for common disease and symptom patterns
+        that clinical NER models might miss in narrative text.
+        """
+        patterns = []
+        text_lower = text.lower()
+
+        # Common diseases and conditions found in clinical notes
+        disease_patterns = [
+            # Respiratory diseases
+            r'\b(chronic obstructive pulmonary disease|copd|chronic bronchitis|emphysema|asthma)\b',
+            r'\b(bronchitis|pneumonia|pneumonitis|pleuritis|pleural effusion)\b',
+            r'\b(tuberculosis|tb|pulmonary fibrosis|interstitial lung disease|ild)\b',
+            r'\b(pulmonary embolism|pe|acute respiratory distress syndrome|ards)\b',
+            r'\b(sleep apnea|obstructive sleep apnea|osa|hypoxemia|hypercapnia)\b',
+            # Cardiovascular diseases
+            r'\b(hypertension|htn|high blood pressure|hypotension|low blood pressure)\b',
+            r'\b(heart failure|hf|congestive heart failure|chf|cardiomyopathy)\b',
+            r'\b(coronary artery disease|cad|ischemic heart disease|ihd|angina|myocardial infarction|mi)\b',
+            r'\b(atrial fibrillation|af|afib|ventricular tachycardia|vt|bradycardia)\b',
+            r'\b(peripheral artery disease|pad|aortic aneurysm|aortic stenosis|mitral regurgitation)\b',
+            r'\b(deep vein thrombosis|dvt|pulmonary embolism|pe|varicose veins)\b',
+            # Diabetes
+            r'\b(diabetes mellitus|type 1 diabetes|type 2 diabetes|t1dm|t2dm|dm)\b',
+            r'\b(diabetic ketoacidosis|dka|hyperosmolar hyperglycemic state|hhs)\b',
+            r'\b(diabetic nephropathy|diabetic retinopathy|diabetic neuropathy)\b',
+            # GI diseases
+            r'\b(gastroesophageal reflux disease|gerd|acid reflux|peptic ulcer disease|pud)\b',
+            r'\b(irritable bowel syndrome|ibs|inflammatory bowel disease|ibd|crohn\'s disease|ulcerative colitis)\b',
+            r'\b(appendicitis|diverticulitis|diverticulosis|pancreatitis|cholecystitis|hepatitis|cirrhosis)\b',
+            # Neurological
+            r'\b(migraine|headache|tension headache|cluster headache)\b',
+            r'\b(stroke|cerebrovascular accident|cva|transient ischemic attack|tia|seizure|epilepsy)\b',
+            r'\b(parkinson\'s disease|alzheimer\'s disease|dementia|multiple sclerosis|ms)\b',
+            r'\b(neuropathy|peripheral neuropathy|gbs|guillain-barre syndrome)\b',
+            # Mental health
+            r'\b(depression|major depressive disorder|mdd|dysthymia|bipolar disorder|mania)\b',
+            r'\b(anxiety disorder|generalized anxiety disorder|gad|panic disorder|ptsd|ocd)\b',
+            r'\b(schizophrenia|psychosis|delirium|dementia)\b',
+            # Cancer
+            r'\b(cancer|carcinoma|tumor|neoplasm|malignancy|metastasis)\b',
+            r'\b(breast cancer|lung cancer|prostate cancer|colorectal cancer|ovarian cancer)\b',
+            r'\b(leukemia|lymphoma|melanoma|sarcoma)\b',
+            # Infections
+            r'\b(urinary tract infection|uti|sepsis|septicemia|bacteremia|cellulitis|abscess)\b',
+            r'\b(meningitis|encephalitis|endocarditis|osteomyelitis|sinusitis|pharyngitis|tonsillitis)\b',
+            # Musculoskeletal
+            r'\b(arthritis|osteoarthritis|rheumatoid arthritis|ra|gout|osteoporosis)\b',
+            r'\b(fracture|sprain|strain|tendinitis|bursitis|carpal tunnel syndrome)\b',
+            r'\b(scoliosis|kyphosis|herniated disc|slipped disc|sciatica|low back pain|lbp)\b',
+            # Dermatological
+            r'\b(eczema|dermatitis|psoriasis|acne|urticaria|hives|contact dermatitis|atopic dermatitis)\b',
+            r'\b(herpes|shingles|varicella|impetigo|cellulitis|fungal infection|tinea)\b',
+            # Other common conditions
+            r'\b(anemia|iron deficiency anemia|ida|thalassemia|sickle cell disease)\b',
+            r'\b(thyroid disease|hypothyroidism|hyperthyroidism|goiter|hashimoto\'s thyroiditis|graves\' disease)\b',
+            r'\b(chronic kidney disease|ckd|acute kidney injury|aki|nephrotic syndrome|nephritis)\b',
+            r'\b(hyperlipidemia|dyslipidemia|high cholesterol|obesity|overweight|malnutrition)\b',
+            r'\b(hypokalemia|hyperkalemia|hyponatremia|hypernatremia|metabolic acidosis|metabolic alkalosis)\b',
+            r'\b(allergy|allergic rhinitis|hay fever|food allergy|drug allergy|latex allergy)\b',
+            r'\b(hiv|aids|hepatitis b|hepatitis c|std|sti|sexually transmitted infection)\b',
+        ]
+
+        for pattern in disease_patterns:
+            for match in re.finditer(pattern, text_lower):
+                # Check if this position is already covered by an existing entity
+                if not any(p["start"] <= match.start() < p["end"] for p in patterns):
+                    patterns.append({
+                        "text": text[match.start():match.end()],
+                        "label": "DISEASE",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.85,
+                        "color": self.color_map.get("DISEASE", "#ffc9de")
+                    })
+
+        # Common symptoms (may be missed by NER)
+        symptom_patterns = [
+            # Pain symptoms
+            r'\b(chest pain|angina|chest discomfort|substernal pain|retrosternal pain)\b',
+            r'\b(abdominal pain|stomach pain|belly pain|gastric pain|epigastric pain)\b',
+            r'\b(back pain|low back pain|lumbar pain|sciatica|radicular pain)\b',
+            r'\b(joint pain|arthralgia|bone pain|muscle pain|myalgia)\b',
+            r'\b(headache|migraine|throbbing pain|sharp pain|dull pain|aching)\b',
+            # Respiratory symptoms
+            r'\b(shortness of breath|dyspnea|dyspnoea|sob|breathlessness|difficulty breathing)\b',
+            r'\b(cough|dry cough|productive cough|wet cough|chronic cough|whooping cough)\b',
+            r'\b(wheezing|wheeze|stridor|tachypnea|rapid breathing|hyperventilation)\b',
+            r'\b(hemoptysis|coughing blood|blood in sputum|bloody sputum)\b',
+            r'\b(nasal congestion|runny nose|rhinorrhea|sneezing|postnasal drip)\b',
+            # GI symptoms
+            r'\b(nausea|vomiting|emesis|retching|dry heaves)\b',
+            r'\b(diarrhea|constipation|loose stools|watery stools|bloody diarrhea)\b',
+            r'\b(heartburn|indigestion|dyspepsia|bloating|abdominal distension|flatulence)\b',
+            r'\b(loss of appetite|anorexia|weight loss|unintentional weight loss|weight gain)\b',
+            r'\b(difficulty swallowing|dysphagia|odynophagia|painful swallowing)\b',
+            # Cardiovascular symptoms
+            r'\b(palpitations|racing heart|irregular heartbeat|skipped beats|fluttering)\b',
+            r'\b(chest tightness|chest pressure|chest heaviness|squeezing chest)\b',
+            r'\b(syncope|fainting|presyncope|near fainting|lightheadedness|dizziness|vertigo)\b',
+            r'\b(edema|swelling|peripheral edema|ankle swelling|leg swelling|pitting edema)\b',
+            r'\b(claudication|intermittent claudication|leg pain on walking)\b',
+            # Neurological symptoms
+            r'\b(weakness|muscle weakness|fatigue|tiredness|lethargy|malaise|exhaustion)\b',
+            r'\b(numbness|tingling|paresthesia|pins and needles|burning sensation)\b',
+            r'\b(tremor|shaking|rigidity|bradykinesia|slowness of movement)\b',
+            r'\b(confusion|disorientation|memory loss|forgetfulness|cognitive impairment)\b',
+            r'\b(difficulty speaking|dysarthria|aphasia|slurred speech)\b',
+            r'\b(vision changes|blurred vision|double vision|diplopia|vision loss|blindness)\b',
+            r'\b(seizure|convulsion|fit|aura|loss of consciousness|loc)\b',
+            # Other symptoms
+            r'\b(fever|high temperature|pyrexia|hyperthermia|chills|rigor|rigors)\b',
+            r'\b(night sweats|diaphoresis|excessive sweating|hyperhidrosis)\b',
+            r'\b(rash|skin rash|erythema|pruritus|itching|urticaria|hives)\b',
+            r'\b(bruising|ecchymosis|petechiae|purpura|bleeding|hemorrhage)\b',
+            r'\b(insomnia|difficulty sleeping|sleep disturbance|restless sleep|hypersomnia)\b',
+            r'\b(anxiety|nervousness|worry|panic|fear|restlessness|agitation)\b',
+            r'\b(depressed mood|sadness|hopelessness|worthlessness|guilt|suicidal ideation)\b',
+            r'\b(constitutional symptoms|b symptoms|fever night sweats weight loss)\b',
+        ]
+
+        for pattern in symptom_patterns:
+            for match in re.finditer(pattern, text_lower):
+                # Check if this position is already covered
+                if not any(p["start"] <= match.start() < p["end"] for p in patterns):
+                    patterns.append({
+                        "text": text[match.start():match.end()],
+                        "label": "SYMPTOM",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.85,
+                        "color": self.color_map.get("SYMPTOM", "#ffdeb8")
+                    })
+
+        # Duration patterns (e.g., "for 3 weeks", "5 days ago")
+        duration_symptom_patterns = [
+            r'\b(for\s+\d+\s+(day|days|week|weeks|month|months|year|years))\b',
+            r'\b(\d+\s+(day|days|week|weeks|month|months|year|years)\s+ago)\b',
+            r'\b(since\s+\w+\s+ago)\b',
+            r'\b(over\s+the\s+last\s+\d+\s+(day|days|week|weeks|month|months))\b',
+        ]
+
+        for pattern in duration_symptom_patterns:
+            for match in re.finditer(pattern, text_lower):
+                # Check if this position is already covered
+                if not any(p["start"] <= match.start() < p["end"] for p in patterns):
+                    patterns.append({
+                        "text": text[match.start():match.end()],
+                        "label": "DURATION",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 0.8,
+                        "color": self.color_map.get("DURATION", "#e5e5e5")
+                    })
 
         return patterns
 
@@ -695,7 +915,11 @@ class MedTexEngine:
                 r'\b(three|two|one)\s+times?\s+(daily|day)\b',
                 r'\b(thrice|twice|once)\s+daily\b',
                 r'\b(three|two|one)\s+times?\s+a\s+day\b',
-                r'\b(three|two|one)\s+times?\b'  # Standalone "threetimes"
+                r'\b(three|two|one)\s+times?\b',  # Standalone "threetimes"
+                r'\bdaily\b',  # Standalone "daily"
+                r'\bnightly\b',  # Standalone "nightly"
+                r'\bweekly\b',  # Standalone "weekly"
+                r'\bmonthly\b',  # Standalone "monthly"
             ]
             for pattern in freq_patterns:
                 freq_match = re.search(pattern, t, re.I)
@@ -846,19 +1070,30 @@ class MedTexEngine:
                         current["text"] = f"{dosage}{unit}"
                         current["label"] = "DOSAGE"
             
-            # Look ahead for adjacent DRUG fragments (within 10 chars)
+            # Look ahead for adjacent DRUG fragments (within 50 chars)
+            # Increased from 10 to handle cases like "Inhaled Corticosteroid"
+            # where there may be whitespace or punctuation between words
             fragments = [current]
             j = i + 1
             
             while j < len(sorted_entities):
                 next_ent = sorted_entities[j]
                 
-                if next_ent['label'] != 'DRUG':
+                # Allow merging across FORM entities (e.g., "inhaler") 
+                # that appear between DRUG entities
+                if next_ent['label'] not in ('DRUG', 'FORM'):
                     break
                 
+                # Calculate gap considering the actual text between entities
+                between_text = text[current['end']:next_ent['start']]
+                # Allow gaps up to 50 chars, or if only whitespace/punctuation between
                 gap = next_ent['start'] - current['end']
-                if gap <= 10:
-                    fragments.append(next_ent)
+                is_only_punct_ws = re.match(r'^[\s\-/,]+$', between_text) is not None
+                
+                if gap <= 50 or is_only_punct_ws:
+                    if next_ent['label'] == 'DRUG':
+                        fragments.append(next_ent)
+                    # FORM entities become part of the drug name
                     current = next_ent
                     j += 1
                 else:
@@ -904,6 +1139,17 @@ class MedTexEngine:
             words = words[:-1]
 
         clean = ' '.join(words)
+
+        # If OCR produced a noisy multi-word token but one word is a known drug,
+        # prefer the known drug token to avoid duplicates like "Paceclofenac Aceclofenac".
+        known_tokens = [
+            w for w in clean.split()
+            if w.lower() in self.KNOWN_DRUGS or w.lower() in self.DRUG_NORMALIZATION
+        ]
+        if known_tokens:
+            # Prefer longest known token as canonical.
+            clean = max(known_tokens, key=len)
+
         # Remove duplicate adjacent words (e.g., "phexin phexin" → "phexin")
         seen_words: list = []
         for word in clean.split():
@@ -952,6 +1198,13 @@ class MedTexEngine:
         This runs BEFORE NER to prevent garbage entities from being created.
         NOTE: We do NOT lowercase here — Med7/SciSpaCy need original casing.
         """
+        # Strip VLM entity labels that may be embedded in text.
+        text = re.sub(
+            r"(?i)(DOSAGE FORM|FORM|STRENGTH|DOSAGE|FREQUENCY|DURATION|ROUTE|DISEASE|SYMPTOM|ANATOMY|PROCEDURE|LAB|CHEMICAL|CANCER|DRUG)",
+            " ",
+            text,
+        )
+
         # Apply corrections dictionary (case-insensitive replace, preserve original case of replacement)
         for wrong, correct in self.OCR_CORRECTIONS.items():
             if wrong not in ["belladonna", "amphogel", "amphojel"]:
@@ -1055,21 +1308,59 @@ class MedTexEngine:
         # Strict noise blacklist (exclude known drugs that are also dental products)
         noise = {
             "brush", "electric", "paint", "wash", "gate", "pro",
-            "oralb", "electricbrush", "dental", "toothbrush",
+            "oralb", "oral b", "electricbrush", "dental", "toothbrush", "colgate", "plax", "mouthwash",
             "col", "hexin", "lin"
         }
-        # Note: colgate is in KNOWN_DRUGS and should pass exact match check before this
+
+        # Explicit denylist to prevent dental product lines being promoted as drugs.
+        banned_drug_terms = {
+            "colgate", "plax", "colgate plax", "mouthwash",
+            "oral b", "oralb", "electric brush", "electricbrush", "toothbrush",
+        }
+        if name_lower in banned_drug_terms or any(term in name_lower for term in banned_drug_terms):
+            return False
         if name_lower in noise and name_lower not in self.KNOWN_DRUGS:
             return False
 
-        # Multi-word: accept if ANY word is a known drug
+        # Route/form descriptors that should NOT be standalone drugs
+        # These are valid as part of drug names (e.g., "Inhaled Corticosteroid") but not alone
+        route_descriptors = {
+            "inhaled", "oral", "topical", "intravenous", "intramuscular",
+            "subcutaneous", "sublingual", "rectal", "vaginal", "ophthalmic",
+            "otic", "nasal", "buccal", "transdermal", "enteral", "parenteral",
+        }
+        # Generic drug classes that are too vague without specific drug name
+        generic_classes = {
+            "corticosteroid", "steroid", "antibiotic", "antibacterial",
+            "antiviral", "antifungal", "bronchodilator", "antihistamine",
+            "analgesic", "antipyretic", "antiinflammatory", "vasodilator",
+            "diuretic", "antihypertensive", "hypoglycemic", "anticoagulant",
+            "beta-blocker", "betablocker", "ace inhibitor", "statin",
+            "antidepressant", "antipsychotic", "anxiolytic", "sedative",
+            "laxative", "antacid", "antiemetic", "bronchodilator",
+        }
+        # Check individual words for route descriptors and generic classes
         words = name_lower.split()
+        has_known_drug = any(w in self.KNOWN_DRUGS or w in self.DRUG_NORMALIZATION for w in words)
+        has_descriptor = any(w in route_descriptors for w in words)
+        has_generic = any(w in generic_classes for w in words)
+        
+        # Reject if name contains route/generic words but NO known drug
+        # e.g., "Inhaled Corticosteroid" -> has descriptors but no known drug -> reject
+        if (has_descriptor or has_generic) and not has_known_drug:
+            return False
+        
+        if name_lower in route_descriptors or name_lower in generic_classes:
+            return False
+
+        # Multi-word: accept if ANY word is a known drug
         for word in words:
             if word in self.KNOWN_DRUGS or word in self.DRUG_NORMALIZATION:
                 return True
 
         # Accept long-enough names (likely a real multi-word drug/brand)
-        if len(name) >= 6:
+        # Reduced from 6 to 4 for better sensitivity
+        if len(name) >= 4:
             return True
 
         # Short names: require at least one vowel
@@ -1078,19 +1369,83 @@ class MedTexEngine:
 
         return False
 
+    def _extract_missed_drugs_from_text(self, text: str, start: int, end: int) -> list:
+        """
+        Scan text segment for known drugs that Med7 missed.
+        Returns list of dicts with text, start, end for each found drug.
+        """
+        segment_text = text[start:end].lower()
+        found = []
+        
+        # Check for known drugs in this segment
+        for drug in sorted(self.KNOWN_DRUGS, key=len, reverse=True):
+            drug_lower = drug.lower()
+            # Use word boundary matching
+            for match in re.finditer(r'\\b' + re.escape(drug_lower) + r'\\b', segment_text):
+                # Calculate actual position in original text
+                actual_start = start + match.start()
+                actual_end = start + match.end()
+                found.append({
+                    "text": text[actual_start:actual_end],
+                    "label": "DRUG",
+                    "start": actual_start,
+                    "end": actual_end,
+                    "score": 0.85,  # High confidence for dictionary match
+                    "color": self.color_map.get("DRUG", "#ffcfcc")
+                })
+        
+        # Also check normalization map
+        for brand, generic in self.DRUG_NORMALIZATION.items():
+            brand_lower = brand.lower()
+            for match in re.finditer(r'\\b' + re.escape(brand_lower) + r'\\b', segment_text):
+                actual_start = start + match.start()
+                actual_end = start + match.end()
+                found.append({
+                    "text": text[actual_start:actual_end],
+                    "label": "DRUG", 
+                    "start": actual_start,
+                    "end": actual_end,
+                    "score": 0.85,
+                    "color": self.color_map.get("DRUG", "#ffcfcc")
+                })
+        
+        return found
+
     def _group_medications(self, entities: list, text: str) -> list:
         """
-        Group medication entities using strict boundary segmentation.
+        Group medication entities using boundary segmentation.
         Each drug 'owns' everything until the next drug appears.
+        Also handles missed drugs by scanning text segments.
         """
         meds = []
         entities = sorted(entities, key=lambda x: x["start"])
         
-        # Identify indices of all DRUG entities
-        drug_indices = [i for i, e in enumerate(entities) if e["label"] == "DRUG"]
+        # First pass: try to find missed drugs between existing DRUG entities
+        enhanced_entities = list(entities)
+        drug_positions = [(e["start"], e["end"]) for e in entities if e["label"] == "DRUG"]
+        
+        # Add boundaries: start of text, end of text, and between drugs
+        boundaries = [0] + [end for _, end in drug_positions] + [len(text)]
+        
+        for i in range(len(boundaries) - 1):
+            seg_start = boundaries[i]
+            seg_end = boundaries[i + 1]
+            # Only check segments that are reasonably sized (not too small, not too large)
+            if 10 < (seg_end - seg_start) < 200:
+                missed = self._extract_missed_drugs_from_text(text, seg_start, seg_end)
+                for m in missed:
+                    # Check if this position is already covered by an existing entity
+                    if not any(e["start"] <= m["start"] < e["end"] for e in enhanced_entities):
+                        enhanced_entities.append(m)
+        
+        # Re-sort with new entities
+        enhanced_entities = sorted(enhanced_entities, key=lambda x: x["start"])
+        
+        # Identify indices of all DRUG entities (including newly found)
+        drug_indices = [i for i, e in enumerate(enhanced_entities) if e["label"] == "DRUG"]
 
         for idx, drug_i in enumerate(drug_indices):
-            drug_ent = entities[drug_i]
+            drug_ent = enhanced_entities[drug_i]
             
             # Clean and validate the drug name
             cleaned_name = self._clean_drug_name(drug_ent["text"])
@@ -1099,7 +1454,7 @@ class MedTexEngine:
             
             # Context filter: reject if drug name contains or is adjacent to non-medical words
             # Skip context filter for rule-based high-confidence matches (score >= 0.9)
-            if drug_ent.get("score", 1.0) < 0.9:
+            if drug_ent.get("score", 1.0) < 0.9 and drug_ent.get("score", 1.0) > 0:
                 cleaned_name_lower = cleaned_name.lower()
                 non_medical_keywords = ["brush", "paint", "tooth", "dental", "electric", "gum", "wash", "gate", "col", "oral", "colgate"]
                 # Check if drug name itself contains non-medical keywords
@@ -1114,8 +1469,8 @@ class MedTexEngine:
                     continue
 
             # Define boundary: segment extends from this drug until the next drug
-            next_drug_idx = drug_indices[idx + 1] if idx + 1 < len(drug_indices) else len(entities)
-            segment = entities[drug_i:next_drug_idx]
+            next_drug_idx = drug_indices[idx + 1] if idx + 1 < len(drug_indices) else len(enhanced_entities)
+            segment = enhanced_entities[drug_i:next_drug_idx]
 
             med = {
                 "drug": cleaned_name,     # frontend key is 'drug', not 'name'
@@ -1142,7 +1497,9 @@ class MedTexEngine:
 
                 # DOSAGE: "1 tablet", "2 caps"
                 if lbl == "DOSAGE" and not med["dosage"]:
-                    med["dosage"] = etxt
+                    # Guard: avoid capturing duration words as dosage.
+                    if not re.search(r"\b(days?|weeks?|months?)\b", etxt, re.IGNORECASE):
+                        med["dosage"] = etxt
                 
                 if not med["frequency"]:
                     med["frequency"] = parsed["frequency"] or (etxt if lbl == "FREQUENCY" else None)
@@ -1153,9 +1510,14 @@ class MedTexEngine:
                 if not med["form"] and lbl == "FORM":
                     med["form"] = etxt
 
-            # STRICT VALIDATION: Must have at least a frequency OR a duration OR a dosage to be a valid prescription line
-            # RELAXED: For very fragmented OCR, accept drug name alone if it's long enough (>= 6 chars)
-            if med["frequency"] or med["duration"] or med["dosage"] or len(cleaned_name) >= 6:
+            # VALIDATION: Accept if has any medication attribute OR is a known drug
+            if med["frequency"] or med["duration"] or med["dosage"] or med["strength"] or med["form"]:
+                meds.append(med)
+            elif cleaned_name.lower() in self.KNOWN_DRUGS or cleaned_name.lower() in self.DRUG_NORMALIZATION:
+                # Known drug without attributes - still include it
+                meds.append(med)
+            elif len(cleaned_name) >= 6:
+                # Long name might be a valid drug
                 meds.append(med)
 
         return meds
@@ -1235,6 +1597,9 @@ class MedTexEngine:
         
         # Layer 3: Rule-based medical patterns
         results.extend(self._extract_medical_patterns(text))
+        
+        # Layer 3b: Rule-based disease and symptom patterns
+        results.extend(self._extract_disease_patterns(text))
         
         # Layer 4: Transformer NER (Secondary)
         if self.transformer_ner:

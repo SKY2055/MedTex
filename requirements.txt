@@ -29,8 +29,9 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
 # --- NLP / ML ---
-spacy>=3.7.0
-scispacy>=0.5.1
+numpy==1.26.4
+spacy==3.7.5
+scispacy==0.6.2
 transformers>=4.30.0
 torch>=2.0.0
 pyspark>=3.5.0

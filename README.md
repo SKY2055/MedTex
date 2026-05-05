@@ -196,6 +196,8 @@ ollama pull glm-ocr
 pip install -r requirements.txt
 ```
 
+For macOS ARM stability, MedTex pins `numpy==1.26.4` in `requirements.txt`.
+
 ### 4. Install NLP Models
 
 ```bash
@@ -203,11 +205,13 @@ pip install -r requirements.txt
 pip install --no-deps en_core_med7_lg-0.0.1-py3-none-any.whl
 
 # Install SciSpacy BioNLP model
-pip install --no-deps https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.1/en_ner_bionlp13cg_md-0.5.1.tar.gz
+pip install --no-deps https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bionlp13cg_md-0.5.4.tar.gz
 
 # Install BC5CDR model (for disease detection)
-pip install --no-deps https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.1/en_ner_bc5cdr_md-0.5.1.tar.gz
+pip install --no-deps https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
 ```
+
+`en_core_med7_lg` is a custom pipeline and may show a compatibility warning on spaCy 3.7.x. The API can still start, but you should verify extraction quality on your sample prescriptions.
 
 ### 5. Install Optional Java 17 (for batch processing)
 
@@ -696,6 +700,12 @@ Entities are color-coded in the UI for quick visual identification:
 
 **Issue:** `OSError: [E050] Can't find model 'en_core_med7_lg'`
 **Solution:** Install the Med7 model: `pip install --no-deps en_core_med7_lg-0.0.1-py3-none-any.whl`
+
+**Issue:** `Segmentation fault` while importing spaCy / backend on macOS
+**Solution:** Reinstall pinned NumPy:
+```bash
+pip install --force-reinstall --no-cache-dir --no-binary=numpy numpy==1.26.4
+```
 
 **Issue:** `JAVA_GATEWAY_EXITED` with PySpark
 **Solution:** Ensure Java 17 is installed and `JAVA_HOME` is set correctly.

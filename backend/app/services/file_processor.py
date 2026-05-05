@@ -504,10 +504,22 @@ def clean_ocr_text(text: str) -> str:
         "Drug", "Form", "Strength", "Dosage", "Frequency",
         "Duration", "Route", "Disease", "Symptom", "Anatomy",
         "Dosage Form",
+        # VLM-specific labels (from vision-language models)
+        "Detailed_description", "Sign_symptom", "Disease_disorder",
+        "Biological_structure", "Diagnostic_procedure", "Lab_value",
+        "Severity", "Date", "Occupation",
+        # All-caps variants
+        "DETAILED_DESCRIPTION", "SIGN_SYMPTOM", "DISEASE_DISORDER",
+        "BIOLOGICAL_STRUCTURE", "DIAGNOSTIC_PROCEDURE", "LAB_VALUE",
+        "SEVERITY", "DATE", "OCCUPATION",
     ]
     for label in ENTITY_LABELS:
-        # Remove label when it is glued to a word: "Cephalexin DRUG" or "CephalexinDRUG"
-        text = re.sub(r'\s*\b' + re.escape(label) + r'\b\s*', ' ', text)
+        escaped = re.escape(label)
+        # Step 1: Remove labels CONCATENATED to words: "coughDISEASE" → "cough"
+        # Use (\w*) to capture ALL preceding/following word chars, not just one
+        text = re.sub(r'(\w*)' + escaped + r'(\w*)', lambda m: (m.group(1) or '') + (m.group(2) or ''), text)
+        # Step 2: Remove standalone labels with surrounding whitespace
+        text = re.sub(r'\s*\b' + escaped + r'\b\s*', ' ', text)
     
     # Fix common handwriting OCR errors
     replacements = {
